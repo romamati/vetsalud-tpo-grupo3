@@ -1,4 +1,4 @@
-# VetSalud S.A. — Sistema de Gestión de Clínica Veterinaria
+# 🐾 VetSalud S.A. — Sistema de Gestión de Clínica Veterinaria
 
 **Trabajo Práctico Obligatorio — Bases de Datos II | 1er Cuatrimestre 2026**
 
@@ -11,7 +11,7 @@
 
 ---
 
-## Arquitectura de Persistencia Políglota
+## 📐 Arquitectura de Persistencia Políglota
 
 Este sistema implementa una arquitectura **políglota** combinando dos motores NoSQL de paradigmas distintos:
 
@@ -28,16 +28,17 @@ El inventario farmacéutico tiene atributos que pueden variar por categoría de 
 
 ---
 
-## Tecnologías utilizadas
+## 🛠️ Tecnologías utilizadas
 
 - **Python 3.12+**
 - **pymongo** — driver oficial de MongoDB para Python
 - **neo4j** — driver oficial de Neo4j para Python
 - **pandas** — carga y procesamiento de CSVs
+- **python-dotenv** — manejo de variables de entorno
 
 ---
 
-## Instalación y configuración
+## ⚙️ Instalación y configuración
 
 ### 1. Clonar el repositorio
 
@@ -52,7 +53,25 @@ cd vetsalud-tpo-grupo3
 pip install -r requirements.txt
 ```
 
-### 3. Configurar variables de entorno
+### 3. Levantar las bases de datos
+
+**MongoDB** — debe estar corriendo localmente en el puerto 27017.
+Si tenés MongoDB Community instalado, simplemente abrí MongoDB Compass o iniciá el servicio.
+
+**Neo4j** — se levanta con Docker:
+
+```bash
+docker run --name Myneo4j -p 7474:7474 -p 7687:7687 --env=NEO4J_AUTH=none -d neo4j
+```
+
+Para iniciar el contenedor si ya existe:
+```bash
+docker start Myneo4j
+```
+
+Podés verificar la interfaz web de Neo4j en: `http://localhost:7474`
+
+### 4. Configurar variables de entorno
 
 Crear un archivo `.env` en la raíz del proyecto basándose en `.env.example`:
 
@@ -60,7 +79,7 @@ Crear un archivo `.env` en la raíz del proyecto basándose en `.env.example`:
 cp .env.example .env
 ```
 
-Editar `.env` con las credenciales de cada base de datos:
+El archivo `.env` debe quedar así:
 
 ```
 MONGO_URI=mongodb://localhost:27017/
@@ -70,44 +89,47 @@ NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=tu_password
 ```
-Aclaración: Si se utilizó el comando de docker con NEO4J_AUTH=none como recomiendan en la guía práctica de la materia
-            para usar Neo4j, entonces, NO es necesario que se complete el campo NEO4J_PASSWORD en el .env
 
-### 4. Cargar los datos iniciales
+> **Nota:** Si se usó el comando Docker con `NEO4J_AUTH=none` (recomendado en la guía práctica de la materia), el campo `NEO4J_PASSWORD` se deja vacío.
+
+### 5. Cargar los datos iniciales
 
 ```bash
-python -m mongodb.load_data
-python -m neo4j.load_data
+python -m mongodb_db.load_data
+python -m neo4j_db.load_data
 ```
 
-### 5. Ejecutar el sistema
+### 6. Ejecutar el sistema
 
 ```bash
-python -m main
+python main.py
 ```
 
 ---
 
-## Estructura del proyecto
+## 📁 Estructura del proyecto
 
 ```
-vetsalud-tpo/
-├── data/                        # CSVs con datasets provistos + registros propios
+vetsalud-tpo-grupo3/
+├── data/                        # CSVs con datasets provistos + 10 registros adicionales propios
 │   ├── pacientes.csv
 │   ├── propietarios.csv
 │   ├── veterinarios.csv
 │   ├── consultas.csv
 │   ├── vacunaciones.csv
 │   └── stock_farmaceutico.csv
-├── mongodb/
+├── mongodb_db/                  # Módulo MongoDB
+│   ├── __init__.py
 │   ├── connection.py            # Conexión a MongoDB
-│   └── load_data.py             # Carga de datos desde CSV
-├── neo4j/
+│   └── load_data.py             # Carga del stock farmacéutico desde CSV
+├── neo4j_db/                    # Módulo Neo4j
+│   ├── __init__.py
 │   ├── connection.py            # Conexión a Neo4j
 │   └── load_data.py             # Carga de nodos y relaciones desde CSV
 ├── queries/
-│   ├── mongodb_queries.py       # Consultas Q7, Q8, Q9, Q11, Q15
-│   └── neo4j_queries.py         # Consultas Q1–Q6, Q10, Q12–Q14
+│   ├── __init__.py
+│   ├── mongodb_queries.py       # Consultas Q8, Q11, Q15
+│   └── neo4j_queries.py         # Consultas Q1–Q7, Q9, Q10, Q12–Q14
 ├── main.py                      # Menú principal integrador
 ├── requirements.txt
 ├── .env.example
@@ -117,7 +139,7 @@ vetsalud-tpo/
 
 ---
 
-## Consultas implementadas
+## 📋 Consultas implementadas
 
 | # | Descripción | Motor |
 |---|---|---|

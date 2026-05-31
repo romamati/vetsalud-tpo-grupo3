@@ -1,5 +1,5 @@
 """
-neo4j/connection.py
+neo4j_db/connection.py
 Módulo de conexión a Neo4j.
 """
 

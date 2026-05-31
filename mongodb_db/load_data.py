@@ -7,7 +7,7 @@ Las demás colecciones se cargan como referencia auxiliar para consultas híbrid
 
 import os
 import pandas as pd
-from mongodb.connection import get_db, close_connection
+from mongodb_db.connection import get_db, close_connection
 
 # Ruta base a los CSVs (relativa a la raíz del proyecto)
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")

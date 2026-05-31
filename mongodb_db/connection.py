@@ -1,5 +1,5 @@
 """
-mongodb/connection.py
+mongodb_db/connection.py
 Módulo de conexión a MongoDB.
 """
 

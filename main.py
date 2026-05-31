@@ -3,8 +3,8 @@ main.py
 Punto de entrada principal del sistema VetSalud.
 """
 
-from mongodb.connection import close_connection as mongo_close
-from neo4j.connection import close_connection as neo4j_close
+from mongodb_db.connection import close_connection as mongo_close
+from neo4j_db.connection import close_connection as neo4j_close
 
 
 def menu():
