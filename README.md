@@ -5,7 +5,7 @@
 | Campo | Detalle |
 |---|---|
 | Grupo | 3 |
-| Integrantes | Franco Ghigliani, Román Berruti, Matías Romanto |
+| Integrantes | Franco Ghigliani, Román Berruti, Matías Romanato |
 | Materia | Bases de Datos II |
 | Entrega | Viernes 12/06/2026 hasta las 23:59 hs |
 
