@@ -1,7 +1,6 @@
 """
 neo4j/connection.py
 Módulo de conexión a Neo4j.
-Grupo 3 — VetSalud TPO BD2 2026
 """
 
 import os

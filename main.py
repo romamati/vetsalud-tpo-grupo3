@@ -1,7 +1,6 @@
 """
 main.py
 Punto de entrada principal del sistema VetSalud.
-Grupo 3 — VetSalud TPO BD2 2026
 """
 
 from mongodb.connection import close_connection as mongo_close

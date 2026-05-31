@@ -1,7 +1,6 @@
 """
 mongodb/connection.py
 Módulo de conexión a MongoDB.
-Grupo 3 — VetSalud TPO BD2 2026
 """
 
 import os

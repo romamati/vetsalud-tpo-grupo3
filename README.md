@@ -70,18 +70,20 @@ NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=tu_password
 ```
+Aclaración: Si se utilizó el comando de docker con NEO4J_AUTH=none como recomiendan en la guía práctica de la materia
+            para usar Neo4j, entonces, NO es necesario que se complete el campo NEO4J_PASSWORD en el .env
 
 ### 4. Cargar los datos iniciales
 
 ```bash
-python mongodb/load_data.py
-python neo4j/load_data.py
+python -m mongodb.load_data
+python -m neo4j.load_data
 ```
 
 ### 5. Ejecutar el sistema
 
 ```bash
-python main.py
+python -m main
 ```
 
 ---
