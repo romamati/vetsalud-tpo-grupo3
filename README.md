@@ -128,8 +128,8 @@ vetsalud-tpo-grupo3/
 │   └── load_data.py             # Carga de nodos y relaciones desde CSV
 ├── queries/
 │   ├── __init__.py
-│   ├── mongodb_queries.py       # Consultas Q8, Q11, Q15
-│   └── neo4j_queries.py         # Consultas Q1–Q7, Q9, Q10, Q12–Q14
+│   ├── mongodb_queries.py       # Consultas Q8, Q15
+│   └── neo4j_queries.py         # Consultas Q1–Q7, Q9, Q10, Q11, Q12–Q14
 ├── main.py                      # Menú principal integrador
 ├── requirements.txt
 ├── .env.example
