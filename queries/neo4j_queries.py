@@ -182,3 +182,251 @@ def q7_top5_diagnosticos():
         ORDER BY frecuencia DESC
         LIMIT 5
     """)
+
+# Q9
+
+def q9_consultas_control_economicas():
+    """
+    Q9: Retorna las consultas de tipo 'Control' con costo menor a $5.000.
+    """
+    return run_query("""
+        MATCH (pac:Paciente)-[:TIENE]->(c:Consulta)
+        MATCH (v:Veterinario)-[:ATIENDE]->(c)
+        WHERE toLower(c.motivo) CONTAINS 'control'
+          AND c.costo < 5000
+        RETURN c.id                               AS id_consulta,
+               pac.nombre                        AS paciente,
+               c.fecha                           AS fecha,
+               c.motivo                          AS motivo,
+               c.diagnostico                     AS diagnostico,
+               c.costo                           AS costo,
+               v.nombre + ' ' + v.apellido        AS veterinario
+        ORDER BY c.costo ASC
+    """)
+
+
+# Q10 
+
+def q10_pacientes_por_sucursal(sucursal: str):
+    """
+    Q10: Retorna todos los pacientes atendidos en una sucursal determinada,
+    navegando la relación a través del veterinario.
+
+    Args:
+        sucursal: Nombre de la sucursal (ej: 'Palermo', 'Belgrano', 'Caballito').
+    """
+    return run_query("""
+        MATCH (v:Veterinario {sucursal: $sucursal})-[:ATIENDE]->(c:Consulta)
+        MATCH (pac:Paciente)-[:TIENE]->(c)
+        MATCH (prop:Propietario)-[:TIENE]->(pac)
+        RETURN DISTINCT
+               pac.id                            AS id_paciente,
+               pac.nombre                        AS paciente,
+               pac.especie                       AS especie,
+               prop.nombre + ' ' + prop.apellido  AS propietario,
+               prop.telefono                     AS telefono
+        ORDER BY pac.nombre
+    """, {"sucursal": sucursal})
+
+
+# Q11 
+
+def q11_ingresos_por_veterinario_mes_actual():
+    """
+    Q11: Retorna los ingresos totales generados por cada veterinario
+    en el mes actual.
+    """
+    hoy = date.today()
+    inicio_mes = date(hoy.year, hoy.month, 1).isoformat()
+    fin_mes = hoy.isoformat()
+
+    return run_query("""
+        MATCH (v:Veterinario)-[:ATIENDE]->(c:Consulta)
+        WHERE c.fecha >= $inicio AND c.fecha <= $fin
+        RETURN v.id                               AS id_vet,
+               v.nombre + ' ' + v.apellido        AS veterinario,
+               v.sucursal                         AS sucursal,
+               count(c)                           AS cantidad_consultas,
+               sum(c.costo)                       AS ingresos_totales
+        ORDER BY ingresos_totales DESC
+    """, {"inicio": inicio_mes, "fin": fin_mes})
+
+
+# Q12
+
+def q12_propietarios_sin_consultas_ultimo_anio():
+    """
+    Q12: Retorna los propietarios cuyos pacientes no tuvieron ninguna consulta
+    registrada en el último año.
+    """
+    fecha_limite = (date.today() - timedelta(days=365)).isoformat()
+    return run_query("""
+        MATCH (prop:Propietario)-[:TIENE]->(pac:Paciente)
+        WHERE NOT EXISTS {
+            MATCH (pac)-[:TIENE]->(c:Consulta)
+            WHERE c.fecha >= $fecha_limite
+        }
+        RETURN DISTINCT
+               prop.id                            AS id_propietario,
+               prop.nombre + ' ' + prop.apellido  AS propietario,
+               prop.email                         AS email,
+               prop.telefono                      AS telefono,
+               collect(pac.nombre)                AS pacientes
+        ORDER BY propietario
+    """, {"fecha_limite": fecha_limite})
+
+
+# Q13 — ABM de propietarios
+
+def q13_alta_propietario(datos: dict):
+    """
+    Q13 — Alta: Registra un nuevo propietario en el sistema.
+
+    Args:
+        datos: Dict con campos id, nombre, apellido, dni, email, telefono,
+               ciudad, provincia.
+
+    Ejemplo:
+        q13_alta_propietario({
+            'id': 'C017', 'nombre': 'Laura', 'apellido': 'Gómez',
+            'dni': '46000001', 'email': 'laura@gmail.com',
+            'telefono': '1100000001', 'ciudad': 'Buenos Aires',
+            'provincia': 'Buenos Aires'
+        })
+    """
+    existente = run_query(
+        "MATCH (p:Propietario {id: $id}) RETURN p", {"id": datos["id"]}
+    )
+    if existente:
+        return {"ok": False, "mensaje": f"Ya existe un propietario con id '{datos['id']}'."}
+
+    run_query("""
+        CREATE (:Propietario {
+            id:        $id,
+            nombre:    $nombre,
+            apellido:  $apellido,
+            dni:       $dni,
+            email:     $email,
+            telefono:  $telefono,
+            ciudad:    $ciudad,
+            provincia: $provincia,
+            activo:    true
+        })
+    """, datos)
+    return {"ok": True, "mensaje": f"Propietario '{datos['nombre']} {datos['apellido']}' creado correctamente."}
+
+
+def q13_modificar_propietario(id_propietario: str, campos: dict):
+    """
+    Q13 — Modificación: Actualiza uno o más campos de un propietario existente.
+
+    Args:
+        id_propietario: ID del propietario a modificar.
+        campos: Dict con los campos a actualizar (solo los que cambian).
+
+    Ejemplo:
+        q13_modificar_propietario('C001', {'email': 'nuevo@gmail.com', 'telefono': '1199999999'})
+    """
+    if not campos:
+        return {"ok": False, "mensaje": "No se especificaron campos a modificar."}
+
+    set_clause = ", ".join([f"p.{k} = ${k}" for k in campos.keys()])
+    params = {"id": id_propietario, **campos}
+
+    resultado = run_query(
+        f"MATCH (p:Propietario {{id: $id}}) SET {set_clause} RETURN p.id AS id",
+        params
+    )
+    if not resultado:
+        return {"ok": False, "mensaje": f"No se encontró propietario con id '{id_propietario}'."}
+    return {"ok": True, "mensaje": f"Propietario '{id_propietario}' actualizado correctamente."}
+
+
+def q13_baja_logica_propietario(id_propietario: str):
+    """
+    Q13 — Baja lógica: Marca un propietario como inactivo sin eliminarlo del grafo.
+
+    Args:
+        id_propietario: ID del propietario a dar de baja.
+    """
+    resultado = run_query("""
+        MATCH (p:Propietario {id: $id})
+        SET p.activo = false
+        RETURN p.id AS id
+    """, {"id": id_propietario})
+
+    if not resultado:
+        return {"ok": False, "mensaje": f"No se encontró propietario con id '{id_propietario}'."}
+    return {"ok": True, "mensaje": f"Propietario '{id_propietario}' dado de baja lógica correctamente."}
+
+
+# Q14
+
+def q14_registrar_consulta(datos: dict):
+    """
+    Q14: Registra una nueva consulta médica validando que el paciente
+    y el veterinario existan en el sistema.
+
+    Args:
+        datos: Dict con campos id_consulta, id_paciente, id_vet,
+               fecha, motivo, diagnostico, costo, estado.
+
+    Ejemplo:
+        q14_registrar_consulta({
+            'id_consulta': 'CON019', 'id_paciente': 'P003',
+            'id_vet': 'V001', 'fecha': '2026-05-31',
+            'motivo': 'Control anual', 'diagnostico': 'Sano',
+            'costo': 4500, 'estado': 'Cerrada'
+        })
+    """
+    paciente = run_query(
+        "MATCH (p:Paciente {id: $id}) RETURN p.nombre AS nombre", {"id": datos["id_paciente"]}
+    )
+    if not paciente:
+        return {"ok": False, "mensaje": f"Paciente '{datos['id_paciente']}' no encontrado."}
+
+    veterinario = run_query(
+        "MATCH (v:Veterinario {id: $id, activo: true}) RETURN v.nombre AS nombre", {"id": datos["id_vet"]}
+    )
+    if not veterinario:
+        return {"ok": False, "mensaje": f"Veterinario '{datos['id_vet']}' no encontrado o inactivo."}
+
+    existente = run_query(
+        "MATCH (c:Consulta {id: $id}) RETURN c.id AS id", {"id": datos["id_consulta"]}
+    )
+    if existente:
+        return {"ok": False, "mensaje": f"Ya existe una consulta con id '{datos['id_consulta']}'."}
+
+    run_query("""
+        MATCH (pac:Paciente    {id: $id_paciente})
+        MATCH (vet:Veterinario {id: $id_vet})
+        CREATE (c:Consulta {
+            id:          $id_consulta,
+            fecha:       $fecha,
+            motivo:      $motivo,
+            diagnostico: $diagnostico,
+            costo:       $costo,
+            estado:      $estado
+        })
+        CREATE (pac)-[:TIENE]->(c)
+        CREATE (vet)-[:ATIENDE]->(c)
+    """, {
+        "id_paciente":  datos["id_paciente"],
+        "id_vet":       datos["id_vet"],
+        "id_consulta":  datos["id_consulta"],
+        "fecha":        datos["fecha"],
+        "motivo":       datos["motivo"],
+        "diagnostico":  datos["diagnostico"],
+        "costo":        float(datos["costo"]),
+        "estado":       datos["estado"],
+    })
+
+    return {
+        "ok": True,
+        "mensaje": (
+            f"Consulta '{datos['id_consulta']}' registrada: "
+            f"{paciente[0]['nombre']} → {veterinario[0]['nombre']} ({datos['fecha']})."
+        ),
+    }
+
+
