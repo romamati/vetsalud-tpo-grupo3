@@ -28,6 +28,26 @@ from queries.mongodb_queries import (
     q15_actualizar_stock,
 )
 
+# Menú principal
+
+OPCIONES = {
+    "1":  handle_q1,
+    "2":  handle_q2,
+    "3":  handle_q3,
+    "4":  handle_q4,
+    "5":  handle_q5,
+    "6":  handle_q6,
+    "7":  handle_q7,
+    "8":  handle_q8,
+    "9":  handle_q9,
+    "10": handle_q10,
+    "11": handle_q11,
+    "12": handle_q12,
+    "13": handle_q13,
+    "14": handle_q14,
+    "15": handle_q15,
+}
+
 
 def menu():
     print("\n" + "=" * 55)
@@ -144,6 +164,19 @@ def handle_q7():
     for i, r in enumerate(q7_top5_diagnosticos(), 1):
         print(f"  {i}. {r['diagnostico']:30s} → {r['frecuencia']} veces")
 
+
+def handle_q8():
+    print("\n📋 Productos con stock bajo (< 50 unidades)\n")
+    resultados = q8_stock_bajo()
+    if not resultados:
+        print("  No hay productos con stock bajo.")
+        return
+    for r in resultados:
+        print(f"  {r['nombre']:30s} | {r['categoria']:18s} | "
+              f"{r['unidades']:>3} u. | {r['proveedor']}")
+    print(f"\n  Total: {len(resultados)} productos con stock bajo.")
+
+
 def handle_q9():
     print("\n📋 Consultas de tipo 'Control' con costo < $5.000\n")
     resultados = q9_consultas_control_economicas()
@@ -245,6 +278,14 @@ def handle_q14():
         "estado":      input("  Estado (Cerrada / Seguimiento): ").strip(),
     }
     resultado = q14_registrar_consulta(datos)
+    print(f"\n  {'✅' if resultado['ok'] else '❌'} {resultado['mensaje']}")
+
+
+def handle_q15():
+    print("\n📋 Actualizar stock tras consulta\n")
+    id_prod   = input("  ID del producto (ej: PRD001): ").strip().upper()
+    cantidad  = int(input("  Cantidad usada: "))
+    resultado = q15_actualizar_stock(id_prod, cantidad)
     print(f"\n  {'✅' if resultado['ok'] else '❌'} {resultado['mensaje']}")
 
 
