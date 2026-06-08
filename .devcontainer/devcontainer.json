@@ -9,7 +9,7 @@
     "7687": { "label": "Neo4j Bolt" },
     "27017": { "label": "MongoDB" }
   },
-  "postCreateCommand": "pip install -r requirements.txt && cp -n .env.codespaces .env",
+  "postCreateCommand": "pip install -r requirements.txt && cp -n .env.codespaces .env && chmod +x scripts/load_all.sh && chmod +x ./run.sh",
   "customizations": {
     "vscode": {
       "extensions": ["ms-python.python", "ms-python.vscode-pylance"]
