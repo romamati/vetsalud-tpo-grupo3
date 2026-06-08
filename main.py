@@ -30,25 +30,6 @@ from queries.mongodb_queries import (
 
 # Menú principal
 
-OPCIONES = {
-    "1":  handle_q1,
-    "2":  handle_q2,
-    "3":  handle_q3,
-    "4":  handle_q4,
-    "5":  handle_q5,
-    "6":  handle_q6,
-    "7":  handle_q7,
-    "8":  handle_q8,
-    "9":  handle_q9,
-    "10": handle_q10,
-    "11": handle_q11,
-    "12": handle_q12,
-    "13": handle_q13,
-    "14": handle_q14,
-    "15": handle_q15,
-}
-
-
 def menu():
     print("\n" + "=" * 55)
     print("       🐾  VetSalud S.A. — Sistema de Gestión")
@@ -288,6 +269,23 @@ def handle_q15():
     resultado = q15_actualizar_stock(id_prod, cantidad)
     print(f"\n  {'✅' if resultado['ok'] else '❌'} {resultado['mensaje']}")
 
+OPCIONES = {
+    "1":  handle_q1,
+    "2":  handle_q2,
+    "3":  handle_q3,
+    "4":  handle_q4,
+    "5":  handle_q5,
+    "6":  handle_q6,
+    "7":  handle_q7,
+    "8":  handle_q8,
+    "9":  handle_q9,
+    "10": handle_q10,
+    "11": handle_q11,
+    "12": handle_q12,
+    "13": handle_q13,
+    "14": handle_q14,
+    "15": handle_q15,
+}
 
 if __name__ == "__main__":
     main()
