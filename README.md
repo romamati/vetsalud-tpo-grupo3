@@ -1,4 +1,4 @@
-# 🐾 VetSalud S.A. — Sistema de Gestión de Clínica Veterinaria
+# VetSalud S.A. — Sistema de Gestión de Clínica Veterinaria
 
 **Trabajo Práctico Obligatorio — Bases de Datos II | 1er Cuatrimestre 2026**
 
@@ -7,11 +7,10 @@
 | Grupo | 3 |
 | Integrantes | Franco Ghigliani, Román Berruti, Matías Romanato |
 | Materia | Bases de Datos II |
-| Entrega | Viernes 12/06/2026 hasta las 23:59 hs |
 
 ---
 
-## 📐 Arquitectura de Persistencia Políglota
+## Arquitectura de Persistencia Políglota
 
 Este sistema implementa una arquitectura **políglota** combinando dos motores NoSQL de paradigmas distintos:
 
@@ -21,14 +20,14 @@ Este sistema implementa una arquitectura **políglota** combinando dos motores N
 | **Neo4j** | Grafos | Pacientes, Propietarios, Veterinarios, Consultas, Vacunaciones | Relaciones complejas entre entidades, traversal eficiente, consultas de tipo JOIN profundo |
 
 ### ¿Por qué Neo4j y no una BD relacional?
-Las entidades del sistema forman una red natural de relaciones: un paciente pertenece a un propietario, es atendido por veterinarios, recibe vacunas administradas por veterinarios, y esas consultas se realizan en sucursales. Consultas como *"historial completo de un paciente"* o *"todos los pacientes de una sucursal a través del veterinario"* son traversías de grafo que Neo4j resuelve de forma nativa y eficiente mediante Cypher, evitando múltiples JOINs costosos.
+Las entidades del sistema forman una red natural de relaciones: un paciente pertenece a un propietario, es atendido por veterinarios, recibe vacunas administradas por veterinarios, entre otras. Consultas como *"historial completo de un paciente"* o *"todos los pacientes de una sucursal a través del veterinario"* son travesías de grafo que Neo4j resuelve de forma nativa y eficiente mediante Cypher, evitando múltiples JOINs costosos.
 
 ### ¿Por qué MongoDB para el stock?
 El inventario farmacéutico tiene atributos que pueden variar por categoría de producto, es independiente del grafo de relaciones clínicas, y requiere operaciones de actualización masiva (ej: decrementar unidades tras una consulta). El modelo documental de MongoDB es ideal para este caso.
 
 ---
 
-## 🛠️ Tecnologías utilizadas
+## Tecnologías utilizadas
 
 - **Python 3.12+**
 - **pymongo** — driver oficial de MongoDB para Python
@@ -37,10 +36,21 @@ El inventario farmacéutico tiene atributos que pueden variar por categoría de 
 - **python-dotenv** — manejo de variables de entorno
 
 ---
+## Ejecución en GitHub Codespaces
+### 1. Crear un nuevo Codespace basado en la rama `main` del repositorio
+1. En https://github.com/codespaces seleccionar `New Codespace`
+![Seleccionar "new codespace"](./readme_resources/codespace1.png)
+2. Seleccionar el repositorio en la branch `main` y crear el codespace
+![Crear nuevo codespace](./readme_resources/codespace2.png)
 
-## ⚙️ Instalación y configuración
+### 2. Cargar los datos iniciales y ejecutar el sistema
+```bash
+./run.sh
+```
 
-### 1. Clonar el repositorio
+## Instalación, configuración y ejecución local
+
+### 1. Clonar el repositorio y dirigirse al directorio donde el mismo se guardó
 
 ```bash
 git clone https://github.com/romamati/vetsalud-tpo-grupo3.git
@@ -90,27 +100,34 @@ NEO4J_USER=neo4j
 NEO4J_PASSWORD=tu_password
 ```
 
-> **Nota:** Si se usó el comando Docker con `NEO4J_AUTH=none` (recomendado en la guía práctica de la materia), el campo `NEO4J_PASSWORD` se deja vacío.
+> **Nota:** Si se usó el comando Docker con `NEO4J_AUTH=none`, el campo `NEO4J_PASSWORD` se deja vacío.
 
-### 5. Cargar los datos iniciales
-
-```bash
-python -m mongodb_db.load_data
-python -m neo4j_db.load_data
-```
-
-### 6. Ejecutar el sistema
+### 5. Cargar los datos iniciales y ejecutar el sistema
 
 ```bash
-python main.py
+./run.sh
 ```
+
+> **Nota:** Si el archivo no posee privilegios de ejecución, se debe ejecutar en una terminal bash: 
+>``` bash
+> chmod +x scripts/load_all.sh
+>```
+> y
+> ``` bash
+> chmod +x run.sh
+> ```
+> <br>
+
 
 ---
 
-## 📁 Estructura del proyecto
+## Estructura del proyecto
 
 ```
 vetsalud-tpo-grupo3/
+├── .devcontainer/               # Archivos de configuración de container de docker
+│   ├── devcontainer.json
+│   └── Dockerfile
 ├── data/                        # CSVs con datasets provistos + 10 registros adicionales propios
 │   ├── pacientes.csv
 │   ├── propietarios.csv
@@ -130,16 +147,24 @@ vetsalud-tpo-grupo3/
 │   ├── __init__.py
 │   ├── mongodb_queries.py       # Consultas Q8, Q15
 │   └── neo4j_queries.py         # Consultas Q1–Q7, Q9, Q10, Q11, Q12–Q14
+├── readme_resources/            # Imágenes utilizadas en este archivo
+│   ├── codespace1.png
+│   └── codespace2.png      
+├── scripts/
+│   └── load_all.sh
 ├── main.py                      # Menú principal integrador
 ├── requirements.txt
 ├── .env.example
+├── .env.codespaces
+├── docker-compose.yml
 ├── .gitignore
+├── run.sh                       # Script central con carga de base de datos y ejecución del programa
 └── README.md
 ```
 
 ---
 
-## 📋 Consultas implementadas
+## Consultas implementadas
 
 | # | Descripción | Motor |
 |---|---|---|
