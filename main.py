@@ -96,11 +96,11 @@ def pausar():
 def handle_q1():
     print("\n📋 Pacientes activos con datos de propietario\n")
     resultados = q1_pacientes_activos_con_propietario()
-    print("\n   [ID del paciente] [Nombre] ([especie]) → [Id del propietario] [Nombre y apellido] | [Ubicación] | [Contacto]")
+    print("\n   [ID del paciente] [DNI] [Nombre] ([especie]) → [Id del propietario] [Nombre y apellido] | [Ubicación] | [Contacto]")
     print(" -----------------------------------------------------------------------------------------------------------------")
     for r in resultados:
-          print(f"  {r['id_paciente']:6s} {r['paciente']:10s} ({r['especie']:8s}) → "
-              f"{r['id_propietario']:6s} {r['propietario_nombre']:10s} {r['propietario_apellido']:15s} | "
+          print(f"  [{r['id_paciente']}] {r['paciente']:10s} ({r['especie']:8s}) → "
+              f"[{r['id_propietario']}] {r['dni']} {r['propietario_nombre']:10s} {r['propietario_apellido']:15s} | "
               f"{r['ciudad']:12s}, {r['provincia']:15s} | email: {r['email']:25s} tel: {r['telefono']:12s}")
     print(f"\n  Total: {len(resultados)} pacientes activos.")
 
@@ -112,7 +112,7 @@ def handle_q2():
     print("\n   [ID de consulta] | [ID del paciente] Nombre del paciente | diagnónstico | costo | [ID del veterinario] Nombre y apellido del veterinario")
     print(" --------------------------------------------------------------------------------------------------------------------------------------------")
     for r in resultados:
-        print(f"  {r['id_consulta']} | [{r['id_paciente']}] {r['paciente']:10s} | "
+        print(f"  [{r['id_consulta']}] | [{r['id_paciente']}] {r['paciente']:10s} | "
               f"{r['diagnostico']:25s} | ${r['costo']:>8.0f} | [{r['id_veterinario']}] {r['veterinario']}")
     print(f"\n  Total: {len(resultados)} consultas en seguimiento.")
 
@@ -207,11 +207,13 @@ def handle_q10():
     sucursal = input("\n  Ingresá la sucursal (Palermo / Belgrano / Caballito): ").strip()
     print(f"\n📋 Pacientes atendidos en {sucursal}\n")
     resultados = q10_pacientes_por_sucursal(sucursal)
+    print("\n [ID del paciente] Nombre del paciente (especie) → [ID del propietario] Nombre y apellido del propietario | Teléfono del propietario")
+    print(" -----------------------------------------------------------------------------------------------------------------------------------")
     if not resultados:
         print(f"  No se encontraron pacientes para la sucursal '{sucursal}'.")
         return
     for r in resultados:
-        print(f"  {r['paciente']:10s} ({r['especie']:8s}) → {r['propietario']} | {r['telefono']}")
+        print(f"  [{r['id_paciente']}] {r['paciente']:10s} ({r['especie']:8s}) → [{r['id_propietario']}] {r['propietario']:20s} | {r['telefono']}")
     print(f"\n  Total: {len(resultados)} pacientes.")
 
 

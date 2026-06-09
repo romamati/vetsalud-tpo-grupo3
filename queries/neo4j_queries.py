@@ -72,6 +72,7 @@ def q1_pacientes_activos_con_propietario():
                pac.nombre     AS paciente,
                pac.especie    AS especie,
                prop.id        AS id_propietario,
+               prop.dni       AS dni,
                prop.nombre    AS propietario_nombre,
                prop.apellido  AS propietario_apellido,
                prop.email     AS email,
@@ -259,6 +260,7 @@ def q10_pacientes_por_sucursal(sucursal: str):
                pac.id                            AS id_paciente,
                pac.nombre                        AS paciente,
                pac.especie                       AS especie,
+               prop.id                          AS id_propietario,
                prop.nombre + ' ' + prop.apellido  AS propietario,
                prop.telefono                     AS telefono
         ORDER BY pac.nombre
