@@ -19,6 +19,45 @@ Q14 — Registro de nueva consulta médica con validación
 from datetime import date, timedelta
 from neo4j_db.connection import run_query
 
+#Helpers
+
+def _siguiente_id_neo4j(label: str, prefijo: str, ancho: int = 3) -> str:
+    """
+    Genera el próximo ID incremental para un label de Neo4j.
+
+    Ejemplos:
+        Propietario + C   -> C007
+        Veterinario + V   -> V006
+        Consulta + CON    -> CON009
+        Vacunacion + VAC  -> VAC007
+    """
+    resultado = run_query(f"""
+        MATCH (n:{label})
+        WHERE n.id STARTS WITH $prefijo
+        WITH max(toInteger(replace(n.id, $prefijo, ''))) AS max_numero
+        RETURN coalesce(max_numero, 0) + 1 AS siguiente
+    """, {"prefijo": prefijo})
+
+    siguiente = resultado[0]["siguiente"] if resultado else 1
+    return f"{prefijo}{int(siguiente):0{ancho}d}"
+
+def _validar_campos_requeridos(datos: dict, campos: list[str]) -> str | None:
+    """Devuelve el nombre del primer campo obligatorio vacío, o None si todo está OK."""
+    for campo in campos:
+        if not str(datos.get(campo, "")).strip():
+            return campo
+    return None
+
+def _normalizar_estado_consulta(estado: str) -> str:
+    """Normaliza el estado de una consulta a los valores usados por el sistema."""
+    estado_limpio = str(estado or "").strip().lower()
+    if estado_limpio in {"cerrada", "cerrado"}:
+        return "Cerrada"
+    if estado_limpio == "seguimiento":
+        return "Seguimiento"
+    return str(estado or "").strip()
+
+
 
 # Q1
 
@@ -279,23 +318,46 @@ def q13_alta_propietario(datos: dict):
     """
     Q13 — Alta: Registra un nuevo propietario en el sistema.
 
-    Args:
-        datos: Dict con campos id, nombre, apellido, dni, email, telefono,
-               ciudad, provincia.
+    El ID se genera automáticamente con formato CXXX, por lo que no debe
+    recibirse desde el input del usuario.
 
-    Ejemplo:
-        q13_alta_propietario({
-            'id': 'C017', 'nombre': 'Laura', 'apellido': 'Gómez',
-            'dni': '46000001', 'email': 'laura@gmail.com',
-            'telefono': '1100000001', 'ciudad': 'Buenos Aires',
-            'provincia': 'Buenos Aires'
-        })
+    Args:
+        datos: Dict con campos nombre, apellido, dni, email, telefono,
+               ciudad, provincia.
     """
-    existente = run_query(
-        "MATCH (p:Propietario {id: $id}) RETURN p", {"id": datos["id"]}
+    campos_obligatorios = ["nombre", "apellido", "dni", "email", "telefono", "ciudad", "provincia"]
+    faltante = _validar_campos_requeridos(datos, campos_obligatorios)
+    if faltante:
+        return {
+            "ok": False,
+            "mensaje": f"Falta completar el campo '{faltante}'. Revisá los datos e intentá nuevamente.",
+        }
+
+    dni_existente = run_query(
+        "MATCH (p:Propietario {dni: $dni}) RETURN p.id AS id, p.nombre AS nombre, p.apellido AS apellido",
+        {"dni": str(datos["dni"]).strip()},
     )
-    if existente:
-        return {"ok": False, "mensaje": f"Ya existe un propietario con id '{datos['id']}'."}
+    if dni_existente:
+        propietario = dni_existente[0]
+        return {
+            "ok": False,
+            "mensaje": (
+                "Ya hay un propietario registrado con ese DNI: "
+                f"{propietario['nombre']} {propietario['apellido']} ({propietario['id']})."
+            ),
+        }
+
+    nuevo_id = _siguiente_id_neo4j("Propietario", "C")
+    params = {
+        "id": nuevo_id,
+        "nombre": str(datos["nombre"]).strip(),
+        "apellido": str(datos["apellido"]).strip(),
+        "dni": str(datos["dni"]).strip(),
+        "email": str(datos["email"]).strip(),
+        "telefono": str(datos["telefono"]).strip(),
+        "ciudad": str(datos["ciudad"]).strip(),
+        "provincia": str(datos["provincia"]).strip(),
+    }
 
     run_query("""
         CREATE (:Propietario {
@@ -309,8 +371,13 @@ def q13_alta_propietario(datos: dict):
             provincia: $provincia,
             activo:    true
         })
-    """, datos)
-    return {"ok": True, "mensaje": f"Propietario '{datos['nombre']} {datos['apellido']}' creado correctamente."}
+    """, params)
+
+    return {
+        "ok": True,
+        "id_generado": nuevo_id,
+        "mensaje": f"Propietario creado correctamente con ID {nuevo_id}: {params['nombre']} {params['apellido']}.",
+    }
 
 
 def q13_modificar_propietario(id_propietario: str, campos: dict):
@@ -364,35 +431,60 @@ def q14_registrar_consulta(datos: dict):
     Q14: Registra una nueva consulta médica validando que el paciente
     y el veterinario existan en el sistema.
 
-    Args:
-        datos: Dict con campos id_consulta, id_paciente, id_vet,
-               fecha, motivo, diagnostico, costo, estado.
+    El ID se genera automáticamente con formato CONXXX, por lo que no debe
+    recibirse desde el input del usuario.
 
-    Ejemplo:
-        q14_registrar_consulta({
-            'id_consulta': 'CON019', 'id_paciente': 'P003',
-            'id_vet': 'V001', 'fecha': '2026-05-31',
-            'motivo': 'Control anual', 'diagnostico': 'Sano',
-            'costo': 4500, 'estado': 'Cerrada'
-        })
+    Args:
+        datos: Dict con campos id_paciente, id_vet, fecha, motivo,
+               diagnostico, costo, estado.
     """
+    campos_obligatorios = ["id_paciente", "id_vet", "fecha", "motivo", "diagnostico", "costo", "estado"]
+    faltante = _validar_campos_requeridos(datos, campos_obligatorios)
+    if faltante:
+        return {
+            "ok": False,
+            "mensaje": f"Falta completar el campo '{faltante}'. Revisá los datos e intentá nuevamente.",
+        }
+
+    id_paciente = str(datos["id_paciente"]).strip().upper()
+    id_vet = str(datos["id_vet"]).strip().upper()
+    estado = _normalizar_estado_consulta(datos["estado"])
+
+    if estado not in {"Cerrada", "Seguimiento"}:
+        return {
+            "ok": False,
+            "mensaje": "El estado de la consulta debe ser 'Cerrada' o 'Seguimiento'.",
+        }
+
+    try:
+        costo = float(datos["costo"])
+    except (TypeError, ValueError):
+        return {"ok": False, "mensaje": "El costo debe ser un número válido."}
+
+    if costo < 0:
+        return {"ok": False, "mensaje": "El costo no puede ser negativo."}
+
     paciente = run_query(
-        "MATCH (p:Paciente {id: $id}) RETURN p.nombre AS nombre", {"id": datos["id_paciente"]}
+        "MATCH (p:Paciente {id: $id, activo: true}) RETURN p.nombre AS nombre",
+        {"id": id_paciente},
     )
     if not paciente:
-        return {"ok": False, "mensaje": f"Paciente '{datos['id_paciente']}' no encontrado."}
+        return {
+            "ok": False,
+            "mensaje": f"No encontramos un paciente activo con ID {id_paciente}. Verificá el ID antes de registrar la consulta.",
+        }
 
     veterinario = run_query(
-        "MATCH (v:Veterinario {id: $id, activo: true}) RETURN v.nombre AS nombre", {"id": datos["id_vet"]}
+        "MATCH (v:Veterinario {id: $id, activo: true}) RETURN v.nombre AS nombre, v.apellido AS apellido",
+        {"id": id_vet},
     )
     if not veterinario:
-        return {"ok": False, "mensaje": f"Veterinario '{datos['id_vet']}' no encontrado o inactivo."}
+        return {
+            "ok": False,
+            "mensaje": f"No encontramos un veterinario activo con ID {id_vet}. Verificá el ID antes de registrar la consulta.",
+        }
 
-    existente = run_query(
-        "MATCH (c:Consulta {id: $id}) RETURN c.id AS id", {"id": datos["id_consulta"]}
-    )
-    if existente:
-        return {"ok": False, "mensaje": f"Ya existe una consulta con id '{datos['id_consulta']}'."}
+    nuevo_id = _siguiente_id_neo4j("Consulta", "CON")
 
     run_query("""
         MATCH (pac:Paciente    {id: $id_paciente})
@@ -408,22 +500,23 @@ def q14_registrar_consulta(datos: dict):
         CREATE (pac)-[:TIENE]->(c)
         CREATE (vet)-[:ATIENDE]->(c)
     """, {
-        "id_paciente":  datos["id_paciente"],
-        "id_vet":       datos["id_vet"],
-        "id_consulta":  datos["id_consulta"],
-        "fecha":        datos["fecha"],
-        "motivo":       datos["motivo"],
-        "diagnostico":  datos["diagnostico"],
-        "costo":        float(datos["costo"]),
-        "estado":       datos["estado"],
+        "id_paciente": id_paciente,
+        "id_vet": id_vet,
+        "id_consulta": nuevo_id,
+        "fecha": str(datos["fecha"]).strip(),
+        "motivo": str(datos["motivo"]).strip(),
+        "diagnostico": str(datos["diagnostico"]).strip(),
+        "costo": costo,
+        "estado": estado,
     })
 
+    vet = veterinario[0]
     return {
         "ok": True,
+        "id_generado": nuevo_id,
         "mensaje": (
-            f"Consulta '{datos['id_consulta']}' registrada: "
-            f"{paciente[0]['nombre']} → {veterinario[0]['nombre']} ({datos['fecha']})."
+            f"Consulta registrada correctamente con ID {nuevo_id}: "
+            f"{paciente[0]['nombre']} con Dr/a. {vet['nombre']} {vet['apellido']} ({datos['fecha']})."
         ),
     }
-
 

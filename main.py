@@ -254,7 +254,6 @@ def handle_q13():
     if op == "A":
         print("\n  Completá los datos del nuevo propietario:")
         datos = {
-            "id":        input("  ID (ej: C017): ").strip(),
             "nombre":    input("  Nombre: ").strip(),
             "apellido":  input("  Apellido: ").strip(),
             "dni":       input("  DNI: ").strip(),
@@ -292,7 +291,6 @@ def handle_q13():
 def handle_q14():
     print("\n📋 Registrar nueva consulta médica\n")
     datos = {
-        "id_consulta": input("  ID de consulta (ej: CON019): ").strip(),
         "id_paciente": input("  ID del paciente (ej: P001): ").strip().upper(),
         "id_vet":      input("  ID del veterinario (ej: V001): ").strip().upper(),
         "fecha":       input("  Fecha (YYYY-MM-DD): ").strip(),
