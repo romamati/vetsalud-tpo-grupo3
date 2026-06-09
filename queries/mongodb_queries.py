@@ -28,7 +28,7 @@ def q8_stock_bajo(umbral: int = 50):
     db = get_db()
     resultados = db["stock_farmaceutico"].find(
         {"unidades": {"$lt": umbral}},
-        {"_id": 0, "nombre": 1, "categoria": 1, "unidades": 1, "proveedor": 1}
+        {"_id": 1, "nombre": 1, "categoria": 1, "unidades": 1, "proveedor": 1}
     ).sort("unidades", 1)
 
     return list(resultados)

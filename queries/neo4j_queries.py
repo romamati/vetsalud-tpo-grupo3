@@ -29,17 +29,15 @@ def q1_pacientes_activos_con_propietario():
     """
     return run_query("""
         MATCH (prop:Propietario)-[:TIENE]->(pac:Paciente {activo: true})
-        RETURN pac.id        AS id_paciente,
-               pac.nombre    AS paciente,
-               pac.especie   AS especie,
-               pac.raza      AS raza,
-               pac.fecha_nac AS fecha_nac,
-               prop.id       AS id_propietario,
-               prop.nombre   AS propietario_nombre,
-               prop.apellido AS propietario_apellido,
-               prop.email    AS email,
-               prop.telefono AS telefono,
-               prop.ciudad   AS ciudad,
+        RETURN pac.id         AS id_paciente,
+               pac.nombre     AS paciente,
+               pac.especie    AS especie,
+               prop.id        AS id_propietario,
+               prop.nombre    AS propietario_nombre,
+               prop.apellido  AS propietario_apellido,
+               prop.email     AS email,
+               prop.telefono  AS telefono,
+               prop.ciudad    AS ciudad,
                prop.provincia AS provincia
         ORDER BY prop.apellido, pac.nombre
     """)
@@ -55,14 +53,14 @@ def q2_consultas_en_seguimiento():
     return run_query("""
         MATCH (pac:Paciente)-[:TIENE]->(c:Consulta {estado: 'Seguimiento'})
         MATCH (v:Veterinario)-[:ATIENDE]->(c)
-        RETURN c.id          AS id_consulta,
-               pac.nombre    AS paciente,
-               c.fecha       AS fecha,
-               c.motivo      AS motivo,
-               c.diagnostico AS diagnostico,
-               c.costo       AS costo,
-               v.nombre + ' ' + v.apellido AS veterinario,
-               v.especialidad AS especialidad
+        RETURN c.id                        AS id_consulta,
+               pac.id                      AS id_paciente,
+               pac.nombre                  AS paciente,
+               c.fecha                     AS fecha,
+               c.diagnostico               AS diagnostico,
+               c.costo                     AS costo,
+               v.id                        AS id_veterinario,
+               v.nombre + ' ' + v.apellido AS veterinario
         ORDER BY c.fecha DESC
     """)
 
@@ -81,23 +79,21 @@ def q3_historial_paciente(id_paciente: str):
         MATCH (pac:Paciente {id: $id})-[:TIENE]->(c:Consulta)
         MATCH (v:Veterinario)-[:ATIENDE]->(c)
         RETURN 'Consulta'                        AS tipo,
+               c.id                              AS id,
                c.fecha                           AS fecha,
                c.motivo                          AS descripcion,
-               c.diagnostico                     AS detalle,
-               v.nombre + ' ' + v.apellido       AS veterinario,
-               toString(c.costo)                 AS extra
+               'Diagnóstico: ' + c.diagnostico   AS detalle
         ORDER BY c.fecha DESC
     """, {"id": id_paciente})
 
     vacunas = run_query("""
         MATCH (pac:Paciente {id: $id})-[:RECIBE]->(vac:Vacunacion)
         MATCH (v:Veterinario)-[:APLICA]->(vac)
-        RETURN 'Vacunación'                      AS tipo,
-               vac.fecha_aplicacion              AS fecha,
-               vac.nombre_vacuna                 AS descripcion,
-               'Próx. dosis: ' + vac.proxima_dosis AS detalle,
-               v.nombre + ' ' + v.apellido       AS veterinario,
-               ''                                AS extra
+        RETURN 'Vacunación'                        AS tipo,
+               vac.id                              AS id,
+               vac.fecha_aplicacion                AS fecha,
+               vac.nombre_vacuna                   AS descripcion,
+               'Próx. dosis: ' + vac.proxima_dosis AS detalle
         ORDER BY vac.fecha_aplicacion DESC
     """, {"id": id_paciente})
 
@@ -111,15 +107,16 @@ def q3_historial_paciente(id_paciente: str):
 def q4_propietarios_con_varios_pacientes():
     """
     Q4: Retorna los propietarios que tienen más de un paciente registrado,
-    junto con la cantidad y los nombres de sus mascotas.
+    junto con la cantidad y los datos de sus pacientes.
     """
     return run_query("""
         MATCH (prop:Propietario)-[:TIENE]->(pac:Paciente)
-        WITH prop, count(pac) AS cantidad, collect(pac.nombre) AS mascotas
+        WITH prop,
+             count(pac) AS cantidad,
+             collect({id_paciente: pac.id, paciente: pac.nombre}) AS mascotas
         WHERE cantidad > 1
         RETURN prop.id                            AS id_propietario,
                prop.nombre + ' ' + prop.apellido  AS propietario,
-               prop.email                         AS email,
                cantidad,
                mascotas
         ORDER BY cantidad DESC
@@ -159,12 +156,12 @@ def q6_pacientes_vacunas_vencidas():
         MATCH (prop:Propietario)-[:TIENE]->(pac:Paciente)-[:RECIBE]->(vac:Vacunacion)
         WHERE vac.proxima_dosis < $hoy
         RETURN pac.id                             AS id_paciente,
-               pac.nombre                        AS paciente,
-               pac.especie                       AS especie,
-               vac.nombre_vacuna                 AS vacuna,
-               vac.proxima_dosis                 AS vencio,
+               pac.nombre                         AS paciente,
+               vac.nombre_vacuna                  AS vacuna,
+               vac.proxima_dosis                  AS vencio,
+               prop.id                            AS id_propietario,
                prop.nombre + ' ' + prop.apellido  AS propietario,
-               prop.telefono                     AS telefono
+               prop.telefono                      AS telefono
         ORDER BY vac.proxima_dosis ASC
     """, {"hoy": hoy})
 
@@ -195,11 +192,11 @@ def q9_consultas_control_economicas():
         WHERE toLower(c.motivo) CONTAINS 'control'
           AND c.costo < 5000
         RETURN c.id                               AS id_consulta,
-               pac.nombre                        AS paciente,
-               c.fecha                           AS fecha,
-               c.motivo                          AS motivo,
-               c.diagnostico                     AS diagnostico,
-               c.costo                           AS costo,
+               pac.id                             AS id_paciente,
+               pac.nombre                         AS paciente,
+               c.fecha                            AS fecha,
+               c.costo                            AS costo,
+               v.id                               AS id_veterinario,
                v.nombre + ' ' + v.apellido        AS veterinario
         ORDER BY c.costo ASC
     """)
@@ -233,7 +230,7 @@ def q10_pacientes_por_sucursal(sucursal: str):
 
 def q11_ingresos_por_veterinario_mes_actual():
     """
-    Q11: Retorna los ingresos totales generados por cada veterinario
+    Q11: Retorna los ingresos totales generados por todos los veterinarios
     en el mes actual.
     """
     hoy = date.today()
@@ -241,13 +238,14 @@ def q11_ingresos_por_veterinario_mes_actual():
     fin_mes = hoy.isoformat()
 
     return run_query("""
-        MATCH (v:Veterinario)-[:ATIENDE]->(c:Consulta)
+        MATCH (v:Veterinario)
+        OPTIONAL MATCH (v)-[:ATIENDE]->(c:Consulta)
         WHERE c.fecha >= $inicio AND c.fecha <= $fin
-        RETURN v.id                               AS id_vet,
+        RETURN v.id                               AS id_veterinario,
                v.nombre + ' ' + v.apellido        AS veterinario,
                v.sucursal                         AS sucursal,
                count(c)                           AS cantidad_consultas,
-               sum(c.costo)                       AS ingresos_totales
+               coalesce(sum(c.costo), 0)          AS ingresos_totales
         ORDER BY ingresos_totales DESC
     """, {"inicio": inicio_mes, "fin": fin_mes})
 
@@ -269,9 +267,8 @@ def q12_propietarios_sin_consultas_ultimo_anio():
         RETURN DISTINCT
                prop.id                            AS id_propietario,
                prop.nombre + ' ' + prop.apellido  AS propietario,
-               prop.email                         AS email,
                prop.telefono                      AS telefono,
-               collect(pac.nombre)                AS pacientes
+               collect({id_paciente: pac.id, paciente: pac.nombre}) AS mascotas
         ORDER BY propietario
     """, {"fecha_limite": fecha_limite})
 

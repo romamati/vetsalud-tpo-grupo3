@@ -62,8 +62,20 @@ def main():
             if opcion == "0":
                 print("\n👋 Cerrando conexiones y saliendo. ¡Hasta luego!")
                 break
-            else:
-                print(f"\n⚠️  Consulta [{opcion}] aún no implementada. Próximamente.")
+
+            handler = OPCIONES.get(opcion)
+            if handler is None:
+                print(f"\nOpción [{opcion}] no válida.")
+                pausar()
+                continue
+
+            try:
+                separador()
+                handler()
+            except Exception as exc:
+                print(f"\nError ejecutando la consulta [{opcion}]: {exc}")
+            finally:
+                pausar()
     finally:
         mongo_close()
         neo4j_close()
@@ -84,19 +96,24 @@ def pausar():
 def handle_q1():
     print("\n📋 Pacientes activos con datos de propietario\n")
     resultados = q1_pacientes_activos_con_propietario()
+    print("\n   [ID del paciente] [Nombre] ([especie]) → [Id del propietario] [Nombre y apellido] | [Ubicación] | [Contacto]")
+    print(" -----------------------------------------------------------------------------------------------------------------")
     for r in resultados:
-        print(f"  {r['paciente']:10s} ({r['especie']:8s}) → "
-              f"{r['propietario_nombre']} {r['propietario_apellido']} | "
-              f"{r['ciudad']} | {r['email']}")
+          print(f"  {r['id_paciente']:6s} {r['paciente']:10s} ({r['especie']:8s}) → "
+              f"{r['id_propietario']:6s} {r['propietario_nombre']:10s} {r['propietario_apellido']:15s} | "
+              f"{r['ciudad']:12s}, {r['provincia']:15s} | email: {r['email']:25s} tel: {r['telefono']:12s}")
     print(f"\n  Total: {len(resultados)} pacientes activos.")
 
 
 def handle_q2():
     print("\n📋 Consultas en estado Seguimiento\n")
     resultados = q2_consultas_en_seguimiento()
+
+    print("\n   [ID de consulta] | [ID del paciente] Nombre del paciente | diagnónstico | costo | [ID del veterinario] Nombre y apellido del veterinario")
+    print(" --------------------------------------------------------------------------------------------------------------------------------------------")
     for r in resultados:
-        print(f"  {r['id_consulta']} | {r['paciente']:10s} | "
-              f"{r['diagnostico']:25s} | ${r['costo']:>8.0f} | {r['veterinario']}")
+        print(f"  {r['id_consulta']} | [{r['id_paciente']}] {r['paciente']:10s} | "
+              f"{r['diagnostico']:25s} | ${r['costo']:>8.0f} | [{r['id_veterinario']}] {r['veterinario']}")
     print(f"\n  Total: {len(resultados)} consultas en seguimiento.")
 
 
@@ -104,39 +121,53 @@ def handle_q3():
     id_pac = input("\n  Ingresá el ID del paciente (ej: P001): ").strip().upper()
     print(f"\n📋 Historial completo de {id_pac}\n")
     resultados = q3_historial_paciente(id_pac)
+    print("\n   [Tipo] [ID de consulta/vacunación] [Fecha] | Motivo de consulta/Nombre de vacuna | Detalles adicionales")
+    print(" -----------------------------------------------------------------------------------------------------------")
+
     if not resultados:
         print("  No se encontraron registros para ese paciente.")
         return
     for r in resultados:
-        print(f"  [{r['tipo']:10s}] {r['fecha']} | {r['descripcion']:25s} | {r['detalle']}")
+        print(f"  [{r['tipo']:10s}] {r['id']} {r['fecha']} | {r['descripcion']:25s} | {r['detalle']}")
     print(f"\n  Total: {len(resultados)} registros.")
 
 
 def handle_q4():
     print("\n📋 Propietarios con más de un paciente\n")
     resultados = q4_propietarios_con_varios_pacientes()
+    print("\n   [ID del propietario] Nombre del propietario | Cantidad de mascotas | Mascotas (ID y nombre)")
+    print(" -----------------------------------------------------------------------------------------------")
+
     for r in resultados:
-        print(f"  {r['propietario']:25s} → {r['cantidad']} mascotas: {r['mascotas']}")
+        mascotas = ", ".join(
+            f"[{m['id_paciente']}] {m['paciente']:10s}" for m in r["mascotas"]
+        )
+        print(f"  [{r['id_propietario']}] {r['propietario']:20s} → {r['cantidad']} mascotas: {mascotas}")
     print(f"\n  Total: {len(resultados)} propietarios.")
 
 
 def handle_q5():
     print("\n📋 Veterinarios activos — consultas en los últimos 60 días\n")
     resultados = q5_veterinarios_activos_consultas_recientes()
+    print("\n   [ID del veterinario] Nombre del veterinario | Sucursal | Especialidad | Cantidad de consultas")
+    print(" -------------------------------------------------------------------------------------------------")
     for r in resultados:
-        print(f"  {r['veterinario']:25s} | {r['sucursal']:10s} | "
+        print(f"  [{r['id_vet']}] {r['veterinario']:25s} | {r['sucursal']:10s} | "
               f"{r['especialidad']:20s} | {r['consultas_recientes']} consultas")
 
 
 def handle_q6():
     print("\n📋 Pacientes con vacunas vencidas\n")
     resultados = q6_pacientes_vacunas_vencidas()
+    print("\n   [ID del paciente] Nombre del paciente | Vacuna | Venció | Contacto del propietario")
+    print(" --------------------------------------------------------------------------------------")
+
     if not resultados:
         print("  No hay vacunas vencidas. ✅")
         return
     for r in resultados:
-        print(f"  {r['paciente']:10s} | {r['vacuna']:20s} | "
-              f"venció: {r['vencio']} | Contacto: {r['propietario']} ({r['telefono']})")
+        print(f"  [{r['id_paciente']}] {r['paciente']:10s} | {r['vacuna']:20s} | "
+              f"venció: {r['vencio']} | Contacto: [{r['id_propietario']}] {r['propietario']} ({r['telefono']})")
     print(f"\n  Total: {len(resultados)} vacunas vencidas.")
 
 
@@ -152,8 +183,11 @@ def handle_q8():
     if not resultados:
         print("  No hay productos con stock bajo.")
         return
+    print("\n   [ID del producto] Nombre del producto | Categoría | Unidades | Proveedor")
+    print(" ----------------------------------------------------------------------------")
+
     for r in resultados:
-        print(f"  {r['nombre']:30s} | {r['categoria']:18s} | "
+        print(f"  [{r['_id']}] {r['nombre']:30s} | {r['categoria']:18s} | "
               f"{r['unidades']:>3} u. | {r['proveedor']}")
     print(f"\n  Total: {len(resultados)} productos con stock bajo.")
 
@@ -161,9 +195,11 @@ def handle_q8():
 def handle_q9():
     print("\n📋 Consultas de tipo 'Control' con costo < $5.000\n")
     resultados = q9_consultas_control_economicas()
+    print("\n   [ID de Consulta] | [ID del paciente] Nombre del paciente | Fecha | Costo | [ID del Veterinario] Veterinario")
+    print(" ---------------------------------------------------------------------------------------------------------------")
     for r in resultados:
-        print(f"  {r['id_consulta']} | {r['paciente']:10s} | "
-              f"{r['fecha']} | ${r['costo']:>6.0f} | {r['veterinario']}")
+        print(f"  [{r['id_consulta']}] | [{r['id_paciente']}] {r['paciente']:10s} | "
+              f"{r['fecha']} | ${r['costo']:>6.0f} | [{r['id_veterinario']}] {r['veterinario']}")
     print(f"\n  Total: {len(resultados)} consultas.")
 
 
@@ -185,8 +221,10 @@ def handle_q11():
     if not resultados:
         print("  No hay consultas registradas en el mes actual.")
         return
+    print("\n   [ID del veterinario] Nombre del veterinario | Sucursal | Cantidad de consultas | Ingresos totales")
+    print(" -----------------------------------------------------------------------------------------------------")
     for r in resultados:
-        print(f"  {r['veterinario']:25s} | {r['sucursal']:10s} | "
+        print(f"  [{r['id_veterinario']}] {r['veterinario']:25s} | {r['sucursal']:10s} | "
               f"{r['cantidad_consultas']} consultas | ${r['ingresos_totales']:>10.0f}")
 
 
@@ -196,8 +234,13 @@ def handle_q12():
     if not resultados:
         print("  Todos los propietarios tienen consultas recientes. ✅")
         return
+    print("\n   [ID del propietario] Nombre del propietario | Teléfono | Mascotas")
+    print(" ---------------------------------------------------------------------")
     for r in resultados:
-        print(f"  {r['propietario']:25s} | {r['email']:30s} | Pacientes: {r['pacientes']}")
+        mascotas = ", ".join(
+            f"[{m['id_paciente']}] {m['paciente']:10s}" for m in r["mascotas"]
+        )
+        print(f"  [{r['id_propietario']}] {r['propietario']:25s} | {r['telefono']:10s} | Mascotas: {mascotas}")
     print(f"\n  Total: {len(resultados)} propietarios sin actividad reciente.")
 
 
