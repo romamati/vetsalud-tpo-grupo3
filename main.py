@@ -220,9 +220,6 @@ def handle_q10():
 def handle_q11():
     print("\n📋 Ingresos por veterinario — mes actual\n")
     resultados = q11_ingresos_por_veterinario_mes_actual()
-    if not resultados:
-        print("  No hay consultas registradas en el mes actual.")
-        return
     print("\n   [ID del veterinario] Nombre del veterinario | Sucursal | Cantidad de consultas | Ingresos totales")
     print(" -----------------------------------------------------------------------------------------------------")
     for r in resultados:
